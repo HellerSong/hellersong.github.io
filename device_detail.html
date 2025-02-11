@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备详情 - 设备监控平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .phone-container {
+            position: relative;
+            width: 280px;
+            height: 560px;
+            margin: 20px auto;
+            border-radius: 36px;
+            background: #1a1a1a;
+            padding: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        .phone-screen {
+            width: 100%;
+            height: 100%;
+            background: #000;
+            border-radius: 28px;
+            overflow: hidden;
+            position: relative;
+            border: 2px solid #333;
+        }
+
+        .phone-notch {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 24px;
+            background: #1a1a1a;
+            border-bottom-left-radius: 16px;
+            border-bottom-right-radius: 16px;
+            z-index: 10;
+        }
+
+        .phone-power {
+            position: absolute;
+            right: -2px;
+            top: 100px;
+            width: 4px;
+            height: 40px;
+            background: #2d2d2d;
+            border-radius: 2px;
+        }
+
+        .phone-volume {
+            position: absolute;
+            left: -2px;
+            top: 100px;
+            width: 4px;
+            height: 80px;
+            background: #2d2d2d;
+            border-radius: 2px;
+        }
+
+        .vertical-tabs {
+            position: absolute;
+            left: -32px;
+            /* 改为左侧 */
+            top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 10;
+        }
+
+        .tab-button {
+            width: 32px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border-radius: 8px 0 0 8px;
+            /* 改变圆角方向 */
+            transition: all 0.3s ease;
+            box-shadow: -2px 2px 8px rgba(0, 0, 0, 0.1);
+            /* 调整阴影方向 */
+            cursor: pointer;
+            border: 1px solid #e5e7eb;
+            border-right: none;
+            /* 改为右边无边框 */
+            position: relative;
+        }
+
+        .tab-button.active {
+            background: #f3f4f6;
+            border-right: 3px solid #3b82f6;
+            /* 改为右边高亮 */
+            width: 48px;
+            /* 将激活状态的宽度从 80px 改为 48px */
+        }
+
+        .tab-text {
+            writing-mode: vertical-rl;
+            /* 保持竖向 */
+            transform: rotate(0deg);
+            /* 移除旋转 */
+            white-space: nowrap;
+            font-size: 14px;
+            color: #4b5563;
+            letter-spacing: 2px;
+        }
+
+        #rightPanel {
+            margin-right: 0;
+            margin-left: 48px;
+            /* 改为左侧边距 */
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50">
+    <!-- 顶部导航栏 -->
+    <nav class="bg-white shadow-sm relative z-50">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center h-16 space-x-4">
+                <button onclick="window.location.href='device_list.html'"
+                    class="flex items-center text-gray-600 hover:text-gray-900">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    <span>返回设备列表</span>
+                </button>
+
+                <!-- 基本操作按钮组 -->
+                <div class="flex space-x-2">
+                    <button class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm">
+                        启动方块
+                    </button>
+                    <button class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-sm">
+                        停止方块
+                    </button>
+                    <button class="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-sm">
+                        清除方块缓存
+                    </button>
+                </div>
+
+                <!-- 脚本场景选择 -->
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm text-gray-600">请选择脚本场景：</span>
+                    <div class="relative inline-block text-left">
+                        <button onclick="toggleDropdown('scriptTests')"
+                            class="px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            选择场景
+                            <svg class="w-4 h-4 ml-2 inline-block" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <div id="scriptTests"
+                            class="hidden dropdown-menu absolute z-[9999] mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                            <div class="py-1">
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">1功能</a>
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">2功能</a>
+                                <div class="border-t border-gray-100"></div>
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">10分钟性能</a>
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">冷启耗时</a>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 添加执行按钮 -->
+                    <button
+                        class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        执行
+                    </button>
+                    <!-- 添加结束使用按钮，使用 ml-auto 将其推到最右侧 -->
+                    <button onclick="endSession()"
+                        class="ml-auto px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-sm flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        结束使用
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 添加下拉菜单控制脚本 -->
+    <script>
+        function toggleDropdown(id) {
+            const dropdown = document.getElementById(id);
+            const allDropdowns = document.querySelectorAll('[id$="Ops"],[id$="Tests"]');
+
+            // 关闭其他下拉菜单
+            allDropdowns.forEach(menu => {
+                if (menu.id !== id && !menu.classList.contains('hidden')) {
+                    menu.classList.add('hidden');
+                }
+            });
+
+            // 切换当前下拉菜单
+            dropdown.classList.toggle('hidden');
+        }
+
+        // 点击其他地方关闭下拉菜单
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.relative')) {
+                const allDropdowns = document.querySelectorAll('[id$="Ops"],[id$="Tests"]');
+                allDropdowns.forEach(menu => menu.classList.add('hidden'));
+            }
+        });
+    </script>
+
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex">
+            <!-- 左侧屏幕镜像 -->
+            <div id="leftPanel" class="min-w-[300px]" style="width: 33%;">
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <h2 class="text-lg font-semibold mb-4">屏幕镜像</h2>
+                    <div class="phone-container">
+                        <div class="phone-screen flex items-center justify-center">
+                            <div class="phone-notch"></div>
+                            <div class="phone-power"></div>
+                            <div class="phone-volume"></div>
+                            <span class="text-white text-sm">设备屏幕内容</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 分隔条 -->
+            <div id="resizer" class="resizer"></div>
+
+            <!-- 右侧内容区 -->
+            <div id="rightPanel" class="flex-1 min-w-[500px]">
+                <div class="bg-white rounded-lg shadow relative min-h-[600px]">
+                    <!-- 将 Tab 导航改为竖向 -->
+                    <div class="vertical-tabs">
+                        <button onclick="switchTab('log')" id="logTab" class="tab-button active">
+                            <span class="tab-text">日志</span>
+                        </button>
+                        <button onclick="switchTab('performance')" id="performanceTab" class="tab-button">
+                            <span class="tab-text">性能</span>
+                        </button>
+                        <button onclick="switchTab('file')" id="fileTab" class="tab-button">
+                            <span class="tab-text">文件</span>
+                        </button>
+                    </div>
+
+                    <!-- Tab 内容部分 -->
+                    <div class="p-4 relative min-h-[600px]">
+                        <!-- 日志面板 -->
+                        <div id="logPanel">
+                            <div class="bg-gray-100 p-4 rounded h-96 overflow-y-auto font-mono text-sm max-w-4xl">
+                                <div class="text-gray-600">2024-02-04 13:00:01 [INFO] 设备已连接</div>
+                                <div class="text-gray-600">2024-02-04 13:00:02 [INFO] 应用启动中...</div>
+                                <div class="text-yellow-600">2024-02-04 13:00:03 [WARN] 性能监控开始</div>
+                            </div>
+                        </div>
+
+                        <!-- 性能面板 -->
+                        <div id="performancePanel" class="hidden space-y-4 pb-16">
+                            <div class="h-40">
+                                <canvas id="fpsChart"></canvas>
+                            </div>
+                            <div class="h-40">
+                                <canvas id="cpuChart"></canvas>
+                            </div>
+                            <div class="h-40">
+                                <canvas id="memoryChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- 将保存报告按钮移到这里 -->
+                        <div id="saveReportBtnContainer" class="absolute bottom-0 right-6 mb-4 hidden">
+                            <button onclick="saveReport()"
+                                class="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg shadow-lg hover:bg-indigo-700 transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                </svg>
+                                <span>保存为报告</span>
+                            </button>
+                        </div>
+                        <!-- 文件上传面板 -->
+                        <div id="filePanel" class="hidden">
+                            <div class="space-y-4">
+                                <!-- 文件选择按钮 -->
+                                <div class="flex space-x-4">
+                                    <button onclick="document.getElementById('fileInput').click()"
+                                        class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center">
+                                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 4v16m8-8H4"></path>
+                                        </svg>
+                                        选择文件
+                                    </button>
+                                </div>
+
+                                <!-- 文件拖放区域 -->
+                                <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors cursor-pointer"
+                                    id="dropZone">
+                                    <input type="file" id="fileInput" class="hidden" multiple>
+                                    <div class="text-gray-500">
+                                        <p class="mb-2">拖放文件到此处或点击上传</p>
+                                        <p class="text-sm">支持的文件类型：APK、ZIP等</p>
+                                    </div>
+                                </div>
+
+                                <!-- 文件列表 -->
+                                <div class="bg-gray-50 rounded-lg p-4">
+                                    <h3 class="text-lg font-medium mb-4">已上传文件</h3>
+                                    <div id="fileList" class="space-y-2">
+                                        <!-- 示例文件 -->
+                                        <div class="flex items-center justify-between bg-white p-3 rounded shadow-sm">
+                                            <div class="flex items-center space-x-3">
+                                                <span class="text-gray-600">example.apk</span>
+                                                <span class="text-sm text-gray-400">2.5 MB</span>
+                                                <span
+                                                    class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded">已上传</span>
+                                            </div>
+                                            <button class="text-red-500 hover:text-red-700">删除</button>
+                                        </div>
+                                        <div class="flex items-center justify-between bg-white p-3 rounded shadow-sm">
+                                            <div class="flex items-center space-x-3">
+                                                <span class="text-gray-600">data.zip</span>
+                                                <span class="text-sm text-gray-400">5.8 MB</span>
+                                                <span
+                                                    class="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded">上传中</span>
+                                            </div>
+                                            <button class="text-red-500 hover:text-red-700">删除</button>
+                                        </div>
+                                        <div class="flex items-center justify-between bg-white p-3 rounded shadow-sm">
+                                            <div class="flex items-center space-x-3">
+                                                <span class="text-gray-600">test_data.zip</span>
+                                                <span class="text-sm text-gray-400">12.3 MB</span>
+                                                <span
+                                                    class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded">已上传</span>
+                                            </div>
+                                            <button class="text-red-500 hover:text-red-700">删除</button>
+                                        </div>
+                                        <div class="flex items-center justify-between bg-white p-3 rounded shadow-sm">
+                                            <div class="flex items-center space-x-3">
+                                                <span class="text-gray-600">debug.apk</span>
+                                                <span class="text-sm text-gray-400">45.7 MB</span>
+                                                <span
+                                                    class="px-2 py-1 text-xs bg-red-100 text-red-800 rounded">上传失败</span>
+                                            </div>
+                                            <button class="text-red-500 hover:text-red-700">删除</button>
+                                        </div>
+                                        <div class="flex items-center justify-between bg-white p-3 rounded shadow-sm">
+                                            <div class="flex items-center space-x-3">
+                                                <span class="text-gray-600">config.json</span>
+                                                <span class="text-sm text-gray-400">0.2 MB</span>
+                                                <span
+                                                    class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded">已上传</span>
+                                            </div>
+                                            <button class="text-red-500 hover:text-red-700">删除</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- 添加保存报告按钮 -->
+                            <div class="absolute bottom-6 right-6">
+                                <button onclick="saveReport()"
+                                    class="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg shadow-lg hover:bg-indigo-700 transition-colors hidden"
+                                    id="saveReportBtn">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                    </svg>
+                                    <span>保存为报告</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <script>
+                        // 修改 Tab 切换函数
+                        function switchTab(tabName) {
+                            const tabs = ['log', 'performance', 'file'];  // 添加 file 选项
+                            tabs.forEach(tab => {
+                                const tabButton = document.getElementById(`${tab}Tab`);
+                                const tabPanel = document.getElementById(`${tab}Panel`);
+
+                                if (tab === tabName) {
+                                    tabButton.classList.add('active');
+                                    tabPanel.classList.remove('hidden');
+                                } else {
+                                    tabButton.classList.remove('active');
+                                    tabPanel.classList.add('hidden');
+                                }
+                            });
+
+                            // 控制保存报告按钮的显示
+                            if (saveReportBtnContainer) {
+                                saveReportBtnContainer.classList.toggle('hidden', tabName !== 'performance');
+                            }
+
+                            if (tabName === 'performance') {
+                                initCharts();
+                            }
+                        }
+
+                        // 添加文件上传相关功能
+                        document.addEventListener('DOMContentLoaded', () => {
+                            const dropZone = document.getElementById('dropZone');
+                            const fileInput = document.getElementById('fileInput');
+                            const fileList = document.getElementById('fileList');
+
+                            // 点击上传
+                            dropZone.addEventListener('click', () => {
+                                fileInput.click();
+                            });
+
+                            // 文件选择处理
+                            fileInput.addEventListener('change', handleFiles);
+
+                            // 拖放处理
+                            dropZone.addEventListener('dragover', (e) => {
+                                e.preventDefault();
+                                dropZone.classList.add('border-blue-500');
+                            });
+
+                            dropZone.addEventListener('dragleave', () => {
+                                dropZone.classList.remove('border-blue-500');
+                            });
+
+                            dropZone.addEventListener('drop', (e) => {
+                                e.preventDefault();
+                                dropZone.classList.remove('border-blue-500');
+                                handleFiles(e.dataTransfer.files);
+                            });
+
+                            // 处理文件上传
+                            function handleFiles(files) {
+                                Array.from(files).forEach(file => {
+                                    // 创建文件项
+                                    const fileItem = document.createElement('div');
+                                    fileItem.className = 'flex items-center justify-between bg-white p-3 rounded shadow-sm';
+                                    fileItem.innerHTML = `
+                                        <div class="flex items-center space-x-3">
+                                            <span class="text-gray-600">${file.name}</span>
+                                            <span class="text-sm text-gray-400">${(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                                        </div>
+                                        <button class="text-red-500 hover:text-red-700" onclick="this.parentElement.remove()">
+                                            删除
+                                        </button>
+                                    `;
+                                    fileList.appendChild(fileItem);
+
+                                    // 这里可以添加实际的文件上传逻辑
+                                    // uploadFile(file);
+                                });
+                            }
+
+                            // 文件上传函数
+                            function uploadFile(file) {
+                                const formData = new FormData();
+                                formData.append('file', file);
+                                formData.append('device', deviceName);
+
+                                fetch('/upload', {
+                                    method: 'POST',
+                                    body: formData
+                                })
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        console.log('上传成功:', data);
+                                    })
+                                    .catch(error => {
+                                        console.error('上传失败:', error);
+                                    });
+                            }
+                        });
+                    </script>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 获取URL参数
+        const urlParams = new URLSearchParams(window.location.search);
+        const deviceName = urlParams.get('device');
+
+        // Tab切换
+        function switchTab(tabName) {
+            const tabs = ['log', 'performance', 'file'];
+            tabs.forEach(tab => {
+                const tabButton = document.getElementById(`${tab}Tab`);
+                const tabPanel = document.getElementById(`${tab}Panel`);
+
+                if (tab === tabName) {
+                    tabButton.classList.add('active');
+                    tabPanel.classList.remove('hidden');
+                } else {
+                    tabButton.classList.remove('active');
+                    tabPanel.classList.add('hidden');
+                }
+            });
+
+            // 控制保存报告按钮的显示
+            const saveReportBtnContainer = document.getElementById('saveReportBtnContainer');
+            if (saveReportBtnContainer) {
+                saveReportBtnContainer.classList.toggle('hidden', tabName !== 'performance');
+            }
+
+            if (tabName === 'performance') {
+                initCharts();
+            }
+        }
+
+        // 初始化性能图表
+        function initCharts() {
+            const timeLabels = Array.from({ length: 20 }, (_, i) => i);
+            const chartConfigs = {
+                fps: {
+                    label: 'FPS',
+                    color: 'rgb(59, 130, 246)',
+                    data: Array.from({ length: 20 }, () => Math.floor(Math.random() * 20) + 40)
+                },
+                cpu: {
+                    label: 'CPU使用率',
+                    color: 'rgb(239, 68, 68)',
+                    data: Array.from({ length: 20 }, () => Math.floor(Math.random() * 50) + 30)
+                },
+                memory: {
+                    label: '内存使用',
+                    color: 'rgb(16, 185, 129)',
+                    data: Array.from({ length: 20 }, () => Math.floor(Math.random() * 200) + 300)
+                }
+            };
+
+            ['fps', 'cpu', 'memory'].forEach(metric => {
+                const ctx = document.getElementById(`${metric}Chart`).getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: timeLabels,
+                        datasets: [{
+                            label: chartConfigs[metric].label,
+                            data: chartConfigs[metric].data,
+                            borderColor: chartConfigs[metric].color,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            });
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            switchTab('log');  // 默认显示日志面板
+
+            // 文件上传相关功能初始化
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            const fileList = document.getElementById('fileList');
+
+            if (dropZone && fileInput && fileList) {
+                // 点击上传
+                dropZone.addEventListener('click', () => {
+                    fileInput.click();
+                });
+
+                // 文件选择处理
+                fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+                // 拖放处理
+                dropZone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.add('border-blue-500');
+                });
+
+                dropZone.addEventListener('dragleave', () => {
+                    dropZone.classList.remove('border-blue-500');
+                });
+
+                dropZone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.remove('border-blue-500');
+                    handleFiles(e.dataTransfer.files);
+                });
+            }
+
+            // 返回按钮事件监听
+            document.querySelector('button:last-child').addEventListener('click', () => {
+                window.location.href = 'device_list.html';
+            });
+        });
+
+        // 处理文件上传
+        function handleFiles(files) {
+            const fileList = document.getElementById('fileList');
+            Array.from(files).forEach(file => {
+                // 创建文件项
+                const fileItem = document.createElement('div');
+                fileItem.className = 'flex items-center justify-between bg-white p-3 rounded shadow-sm';
+                fileItem.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <span class="text-gray-600">${file.name}</span>
+                        <span class="text-sm text-gray-400">${(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                    </div>
+                    <button class="text-red-500 hover:text-red-700" onclick="this.parentElement.remove()">
+                        删除
+                    </button>
+                `;
+                fileList.appendChild(fileItem);
+
+                // 这里可以添加实际的文件上传逻辑
+                // uploadFile(file);
+            });
+        }
+
+        // 文件上传函数
+        function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('device', deviceName);
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('上传成功:', data);
+                })
+                .catch(error => {
+                    console.error('上传失败:', error);
+                });
+        }
+
+        // 添加拖动调节功能
+        document.addEventListener('DOMContentLoaded', () => {
+            const resizer = document.getElementById('resizer');
+            const leftPanel = document.getElementById('leftPanel');
+            const rightPanel = document.getElementById('rightPanel');
+            let isResizing = false;
+            let startX;
+            let startWidth;
+
+            resizer.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                startX = e.pageX;
+                startWidth = leftPanel.offsetWidth;
+                document.body.style.cursor = 'col-resize';
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+
+                const width = startWidth + (e.pageX - startX);
+                const containerWidth = leftPanel.parentElement.offsetWidth;
+                const minWidth = 300;
+                const maxWidth = containerWidth - 500; // 保证右侧最小宽度
+
+                if (width >= minWidth && width <= maxWidth) {
+                    leftPanel.style.width = `${width}px`;
+                    leftPanel.style.flexGrow = 0;
+                    leftPanel.style.flexShrink = 0;
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                isResizing = false;
+                document.body.style.cursor = 'default';
+            });
+
+            // 移除这两行重复的代码
+            // switchTab('control');
+            // document.querySelector('button:last-child').addEventListener('click', () => {
+            //     window.location.href = 'device_list.html';
+            // });
+        });
+    </script>
+</body>
+
+</html>

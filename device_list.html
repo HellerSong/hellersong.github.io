@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备监控平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .device-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        .device-table th {
+            background-color: #f3f4f6;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        .device-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .device-table tr:hover {
+            background-color: #f9fafb;
+        }
+        .status-idle {
+            color: #059669;
+            background-color: #d1fae5;
+        }
+        .status-busy {
+            color: #dc2626;
+            background-color: #fee2e2;
+        }
+        .status-not-ready {
+            color: #d97706;
+            background-color: #fef3c7;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-2xl font-bold mb-6">设备列表</h1>
+        
+        <!-- 筛选区域 -->
+        <div class="bg-white p-4 rounded-lg shadow mb-6 flex justify-between">
+            <div class="flex space-x-4">
+                <div class="flex items-center">
+                    <label class="mr-2">类型:</label>
+                    <select id="typeFilter" class="form-select rounded border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                        <option>全部</option>
+                        <option>Phone</option>
+                        <option>Pad</option>
+                    </select>
+                </div>
+                <div class="flex items-center">
+                    <label class="mr-2">厂商:</label>
+                    <select id="manufacturerFilter" class="form-select rounded border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                        <option>全部</option>
+                        <option>小米</option>
+                        <option>华为</option>
+                        <option>Apple</option>
+                    </select>
+                </div>
+                <!-- 新增脚本场景选择 -->
+                <div class="flex items-center">
+                    <label class="mr-2">请选择脚本场景:</label>
+                    <select id="scriptFilter" class="form-select rounded border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                        <option value="">请选择</option>
+                        <option value="performance">10分钟性能</option>
+                        <option value="coldstart">冷启耗时</option>
+                    </select>
+                </div>
+                <!-- 新增批量执行按钮 -->
+                <button onclick="batchExecute()" 
+                    class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                            d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                            d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    批量执行
+                </button>
+            </div>
+            <div class="flex space-x-4">
+                <button 
+                    onclick="window.location.href='device_all_run.html'"
+                    class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center"
+                >
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    查看所有设备状态
+                </button>
+                <button 
+                    onclick="window.location.href='performance_report.html'"
+                    class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center"
+                >
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    查看性能报告
+                </button>
+            </div>
+        </div>
+
+        <!-- 标签页 -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="border-b border-gray-200">
+                <nav class="flex">
+                    <button onclick="switchTab('android')" id="androidTab" class="px-6 py-4 text-gray-600 hover:text-gray-800 font-medium border-b-2 border-transparent hover:border-gray-300">
+                        Android
+                    </button>
+                    <button onclick="switchTab('ios')" id="iosTab" class="px-6 py-4 text-gray-600 hover:text-gray-800 font-medium border-b-2 border-transparent hover:border-gray-300">
+                        iOS
+                    </button>
+                </nav>
+            </div>
+            
+            <table class="device-table">
+                <thead>
+                    <tr>
+                        <th>
+                            <input type="checkbox" id="selectAll" 
+                                class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:border-blue-500 focus:ring-blue-500"
+                                onclick="toggleSelectAll()">
+                        </th>
+                        <th>设备名</th>
+                        <th>厂商</th>
+                        <th>型号</th>
+                        <th>类型</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="deviceList">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // 示例数据
+        const devices = [
+            {
+                name: "小米12 Pro",
+                platform: "Android",
+                manufacturer: "小米",
+                model: "12 Pro",
+                type: "Phone",
+                status: "空闲"
+            },
+            {
+                name: "华为 Mate 50",
+                platform: "Android",
+                manufacturer: "华为",
+                model: "Mate 50",
+                type: "Phone",
+                status: "使用中"
+            },
+            {
+                name: "OPPO Find X6",
+                platform: "Android",
+                manufacturer: "OPPO",
+                model: "Find X6",
+                type: "Phone",
+                status: "空闲"
+            },
+            {
+                name: "小米 Pad 6 Pro",
+                platform: "Android",
+                manufacturer: "小米",
+                model: "Pad 6 Pro",
+                type: "Pad",
+                status: "未就绪"
+            },
+            {
+                name: "华为 MatePad Pro",
+                platform: "Android",
+                manufacturer: "华为",
+                model: "MatePad Pro",
+                type: "Pad",
+                status: "空闲"
+            },
+            {
+                name: "iPhone 15 Pro",
+                platform: "iOS",
+                manufacturer: "Apple",
+                model: "iPhone 15 Pro",
+                type: "Phone",
+                status: "空闲"
+            },
+            {
+                name: "iPhone 14",
+                platform: "iOS",
+                manufacturer: "Apple",
+                model: "iPhone 14",
+                type: "Phone",
+                status: "使用中"
+            },
+            {
+                name: "iPhone 13 mini",
+                platform: "iOS",
+                manufacturer: "Apple",
+                model: "iPhone 13 mini",
+                type: "Phone",
+                status: "空闲"
+            },
+            {
+                name: "iPad Pro 12.9",
+                platform: "iOS",
+                manufacturer: "Apple",
+                model: "iPad Pro 12.9",
+                type: "Pad",
+                status: "空闲"
+            },
+            {
+                name: "iPad Air",
+                platform: "iOS",
+                manufacturer: "Apple",
+                model: "iPad Air",
+                type: "Pad",
+                status: "未就绪"
+            }
+        ];
+
+        let currentTab = 'android';
+        
+        // 切换标签页
+        function switchTab(platform) {
+            currentTab = platform;
+            document.getElementById('androidTab').classList.toggle('border-blue-500', platform === 'android');
+            document.getElementById('iosTab').classList.toggle('border-blue-500', platform === 'ios');
+            filterAndRenderDevices();
+        }
+
+        // 筛选并渲染设备
+        function filterAndRenderDevices() {
+            const typeFilter = document.getElementById('typeFilter').value;
+            const manufacturerFilter = document.getElementById('manufacturerFilter').value;
+
+            const filteredDevices = devices.filter(device => {
+                const matchPlatform = device.platform.toLowerCase() === currentTab;
+                const matchType = typeFilter === '全部' || device.type === typeFilter;
+                const matchManufacturer = manufacturerFilter === '全部' || device.manufacturer === manufacturerFilter;
+                return matchPlatform && matchType && matchManufacturer;
+            });
+
+            renderDevices(filteredDevices);
+        }
+
+        // 渲染设备列表
+        function renderDevices(devices) {
+            const tbody = document.getElementById('deviceList');
+            tbody.innerHTML = devices.map(device => `
+                <tr>
+                    <td>
+                        <input type="checkbox" 
+                            class="device-checkbox w-5 h-5 rounded border-gray-300 text-blue-600 focus:border-blue-500 focus:ring-blue-500"
+                            data-device-name="${device.name}"
+                            ${device.status !== '空闲' ? 'disabled' : ''}>
+                    </td>
+                    <td>${device.name}</td>
+                    <td>${device.manufacturer}</td>
+                    <td>${device.model}</td>
+                    <td>${device.type}</td>
+                    <td>
+                        <span class="px-2 py-1 rounded-full text-sm ${getStatusClass(device.status)}">
+                            ${device.status}
+                        </span>
+                    </td>
+                    <td>
+                        <button 
+                            class="px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-600 disabled:bg-gray-300"
+                            ${device.status !== '空闲' ? 'disabled' : ''}
+                            onclick="useDevice('${device.name}')"
+                        >
+                            使用设备
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // 全选/取消全选功能
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll');
+            const checkboxes = document.querySelectorAll('.device-checkbox:not([disabled])');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAll.checked;
+            });
+        }
+
+        // 获取选中的设备名称
+        function getSelectedDevices() {
+            const checkboxes = document.querySelectorAll('.device-checkbox:checked');
+            return Array.from(checkboxes).map(checkbox => checkbox.dataset.deviceName);
+        }
+
+        // 获取状态样式类
+        function getStatusClass(status) {
+            switch (status) {
+                case '空闲': return 'status-idle';
+                case '使用中': return 'status-busy';
+                case '未就绪': return 'status-not-ready';
+                default: return '';
+            }
+        }
+
+        // 使用设备
+        function useDevice(deviceName) {
+            const device = devices.find(d => d.name === deviceName);
+            if (device && device.status === '空闲') {
+                if (device.platform === 'iOS') {
+                    window.location.href = `device_run.html?device=${encodeURIComponent(deviceName)}`;
+                } else {
+                    window.location.href = `device_detail.html?device=${encodeURIComponent(deviceName)}`;
+                }
+            }
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            switchTab('android');
+
+            // 添加筛选功能
+            document.querySelectorAll('select').forEach(select => {
+                select.addEventListener('change', filterAndRenderDevices);
+            });
+        });
+    </script>
+</body>
+</html>

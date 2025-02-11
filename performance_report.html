@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>性能测试报告 - 设备监控平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .report-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        .report-table th {
+            background-color: #f3f4f6;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #e5e7eb;
+            white-space: nowrap;
+        }
+        .report-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .report-table tr:hover {
+            background-color: #f9fafb;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 顶部导航栏 -->
+    <nav class="bg-white shadow-sm">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <button onclick="window.location.href='device_list.html'"
+                        class="flex items-center text-gray-600 hover:text-gray-900">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                        <span>返回设备列表</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8">
+        <!-- 标题和筛选区域 -->
+        <div class="bg-white p-4 rounded-lg shadow mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h1 class="text-2xl font-bold">性能测试报告</h1>
+            </div>
+            
+            <!-- 日期筛选 -->
+            <div class="flex justify-between">
+                <div class="flex space-x-4">
+                    <div class="flex items-center">
+                        <label class="mr-2">开始日期:</label>
+                        <input type="date" id="startDate" class="form-input rounded border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                    </div>
+                    <div class="flex items-center">
+                        <label class="mr-2">结束日期:</label>
+                        <input type="date" id="endDate" class="form-input rounded border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                    </div>
+                    <button onclick="filterReports()" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                        筛选
+                    </button>
+                </div>
+                <button 
+                    onclick="window.location.href='performance_compare.html'"
+                    class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center"
+                >
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    查看对比
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow overflow-x-auto">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>
+                            <input type="checkbox" id="selectAll" 
+                                class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:border-blue-500 focus:ring-blue-500"
+                                onclick="toggleSelectAll()">
+                        </th>
+                        <th>执行时间</th>
+                        <th>设备名称</th>
+                        <th>厂商</th>
+                        <th>系统</th>
+                        <th>内存</th>
+                        <th>芯片</th>
+                        <th>初始温度</th>
+                        <th>结束温度</th>
+                        <th>首帧耗时</th>
+                        <th>首帧备注说明</th>
+                        <th>不跟手次数</th>
+                        <th>明细报告</th>
+                    </tr>
+                </thead>
+                <tbody id="reportList">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // 模拟报告数据
+        const reports = [
+            {
+                executeTime: "2024-02-04 14:30:00",
+                deviceName: "小米12 Pro",
+                manufacturer: "小米",
+                system: "Android 12",
+                memory: "12GB",
+                chip: "骁龙8 Gen 1",
+                initTemp: "28℃",
+                endTemp: "35℃",
+                firstFrameTime: "1.2s",
+                firstFrameNote: "正常启动",
+                lagCount: 2,
+                reportId: "report_001"
+            },
+            {
+                executeTime: "2024-02-04 15:15:00",
+                deviceName: "iPhone 13 Pro",
+                manufacturer: "Apple",
+                system: "iOS 15.4",
+                memory: "6GB",
+                chip: "A15 Bionic",
+                initTemp: "26℃",
+                endTemp: "32℃",
+                firstFrameTime: "0.8s",
+                firstFrameNote: "冷启动",
+                lagCount: 0,
+                reportId: "report_002"
+            },
+            {
+                executeTime: "2024-02-04 16:00:00",
+                deviceName: "华为 Mate 50 Pro",
+                manufacturer: "华为",
+                system: "HarmonyOS 3.0",
+                memory: "8GB",
+                chip: "骁龙8+ Gen 1",
+                initTemp: "27℃",
+                endTemp: "36℃",
+                firstFrameTime: "1.5s",
+                firstFrameNote: "后台启动",
+                lagCount: 1,
+                reportId: "report_003"
+            }
+        ];
+
+        // 渲染报告列表
+        function renderReports() {
+            const tbody = document.getElementById('reportList');
+            tbody.innerHTML = reports.map(report => `
+                <tr>
+                    <td>${report.executeTime}</td>
+                    <td>${report.deviceName}</td>
+                    <td>${report.manufacturer}</td>
+                    <td>${report.system}</td>
+                    <td>${report.memory}</td>
+                    <td>${report.chip}</td>
+                    <td>${report.initTemp}</td>
+                    <td>${report.endTemp}</td>
+                    <td>${report.firstFrameTime}</td>
+                    <td>${report.firstFrameNote}</td>
+                    <td>${report.lagCount}</td>
+                    <td>
+                        <a href="report_detail.html?id=${report.reportId}" 
+                           class="text-blue-600 hover:text-blue-800 underline">
+                            查看详情
+                        </a>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // 导出报告
+        function exportReport() {
+            // TODO: 实现导出功能
+            alert('导出功能开发中...');
+        }
+
+        // 日期筛选功能
+        function filterReports() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            const filteredReports = reports.filter(report => {
+                if (!startDate && !endDate) return true;
+                
+                const reportDate = new Date(report.executeTime);
+                const start = startDate ? new Date(startDate) : null;
+                const end = endDate ? new Date(endDate) : null;
+                
+                if (start && end) {
+                    return reportDate >= start && reportDate <= new Date(endDate + ' 23:59:59');
+                } else if (start) {
+                    return reportDate >= start;
+                } else if (end) {
+                    return reportDate <= new Date(endDate + ' 23:59:59');
+                }
+                return true;
+            });
+
+            renderReports(filteredReports);
+        }
+
+        // 修改渲染函数接收参数
+        function renderReports(reportsToRender = reports) {
+            const tbody = document.getElementById('reportList');
+            tbody.innerHTML = reportsToRender.map(report => `
+                <tr>
+                    <td>
+                        <input type="checkbox" 
+                            class="w-5 h-5 report-checkbox rounded border-gray-300 text-blue-600 focus:border-blue-500 focus:ring-blue-500"
+                            data-report-id="${report.reportId}">
+                    </td>
+                    <td>${report.executeTime}</td>
+                    <td>${report.deviceName}</td>
+                    <td>${report.manufacturer}</td>
+                    <td>${report.system}</td>
+                    <td>${report.memory}</td>
+                    <td>${report.chip}</td>
+                    <td>${report.initTemp}</td>
+                    <td>${report.endTemp}</td>
+                    <td>${report.firstFrameTime}</td>
+                    <td>${report.firstFrameNote}</td>
+                    <td>${report.lagCount}</td>
+                    <td>
+                        <a href="report_detail.html?id=${report.reportId}" 
+                           class="text-blue-600 hover:text-blue-800 underline">
+                            查看详情
+                        </a>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // 全选/取消全选功能
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll');
+            const checkboxes = document.querySelectorAll('.report-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAll.checked;
+            });
+        }
+
+        // 获取选中的报告ID
+        function getSelectedReportIds() {
+            const checkboxes = document.querySelectorAll('.report-checkbox:checked');
+            return Array.from(checkboxes).map(checkbox => checkbox.dataset.reportId);
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            // 设置默认日期范围（最近一周）
+            const today = new Date();
+            const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+            
+            document.getElementById('startDate').value = lastWeek.toISOString().split('T')[0];
+            document.getElementById('endDate').value = today.toISOString().split('T')[0];
+            
+            renderReports();
+        });
+    </script>
+</body>
+</html>
